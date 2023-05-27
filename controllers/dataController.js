@@ -139,7 +139,14 @@ function calculateAQI(data) {
     ];
 
     const aqiForConcentration = (pollutant, conc) => {
-        const bp = breakpoints.find((bp) => bp.pollutant === pollutant);
+        let bp = breakpoints.find((bp) => bp.pollutant === pollutant);
+
+        if (!bp) {
+            console.log(`Breakpoint not found for pollutant: ${pollutant}`);
+            conc = 0; // Set concentration to 0 if breakpoint not found
+            bp = breakpoints[0]; // Use the first breakpoint as a fallback
+        }
+
         const i = bp.conc.findIndex((c) => c > conc) - 1;
         const cLow = bp.conc[i];
         const cHigh = bp.conc[i + 1];
@@ -163,8 +170,21 @@ function calculateAQI(data) {
         for (const [pollutant, concentrations] of Object.entries(locationData)) {
             const meanConcentration =
                 concentrations.reduce((sum, c) => sum + c, 0) / concentrations.length;
+
+            // Check if conc is undefined
+            if (typeof meanConcentration === 'undefined') {
+                overallAQI[location].details[pollutant] = 0;
+                continue; // Move to the next iteration
+            }
+
             const pollutantAQI = aqiForConcentration(pollutant, meanConcentration);
             overallAQI[location].details[pollutant] = pollutantAQI;
+
+            // if AQI for pollutant is Nan, put to 0
+            if (isNaN(pollutantAQI)) {
+                overallAQI[location].details[pollutant] = 0;
+            }
+
             overallAQI[location].aqi = Math.max(
                 overallAQI[location].aqi,
                 pollutantAQI
